@@ -1,6 +1,13 @@
 
 set(proj NUMPY)
 
+if (${CMAKE_PROJECT_NAME}_USE_CONDA_python)
+	ExternalProject_Add_Empty(${proj} DEPENDS ${${proj}_DEPENDENCIES})
+	message("Conda Python in use. Numpy will NOT be built.")
+	return()
+endif()
+
+
 # Set dependency list
 set(${proj}_DEPENDENCIES python python-setuptools)
 
