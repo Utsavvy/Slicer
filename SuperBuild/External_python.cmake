@@ -17,7 +17,7 @@ if(PYTHON_ENABLE_SSL)
   list(APPEND ${proj}_DEPENDENCIES OpenSSL)
 endif()
 # if(${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
-# 	list(APPEND ${proj}_DEPENDENCIES python-conda)
+#   list(APPEND ${proj}_DEPENDENCIES python-conda)
 # endif()
 
 
@@ -36,91 +36,115 @@ if(${CMAKE_PROJECT_NAME}_USE_SYSTEM_${proj})
   set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE})
 endif()
 
-#################### 
+####################
 ## This code is working if the variable PYTHONHOME is set in the terminal, reusing previously installed Miniconda
-#################### 
-# if (${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})  
-# 	set (CONDA_VERSION "python-miniconda")
-	
-# 	# Install miniconda if needed
-# 	if (APPLE)      
-# 	  set (CONDA_HOME ${CMAKE_BINARY_DIR}/${CONDA_VERSION})
-	  
-# 	  if (NOT IS_DIRECTORY "${CONDA_HOME}")
-# 	    message("Installing ${CONDA_VERSION}...")
-	
-# 	    # Create directory to store the installation script
-# 	    file(MAKE_DIRECTORY ${CONDA_HOME}-install)
-# 	    set(CONDA_SCRIPT ${CONDA_HOME}-install/${CONDA_VERSION}.sh)
-	  
-# 	    # Download script        
-# 	    file (DOWNLOAD http://repo.continuum.io/miniconda/Miniconda-3.8.3-MacOSX-x86_64.sh ${CONDA_SCRIPT} SHOW_PROGRESS)
-	
-# 	    # Execute the batch mode installation        
-# 	    execute_process(COMMAND bash ${CONDA_SCRIPT} -f -b -p ${CONDA_HOME})
-	
-# 			# Fix rpath 
-# 			message("COMMAND install_name_tool -id ${CONDA_HOME}/lib/libpython2.7.dylib ${CONDA_HOME}/lib/libpython2.7.dylib")
-# 			execute_process(COMMAND install_name_tool -id ${CONDA_HOME}/lib/libpython2.7.dylib ${CONDA_HOME}/lib/libpython2.7.dylib)
-			
-# 		  message("${CONDA_VERSION} installed")             
-# 		endif()
-		  
-# 	  # Set python variables
-# 	  set(PYTHON_INCLUDE_DIR ${CONDA_HOME}/include/python2.7)
-# 	  set(PYTHON_LIBRARY ${CONDA_HOME}/lib/libpython2.7.dylib)  
-# 	  set(PYTHON_EXECUTABLE ${CONDA_HOME}/bin/python)   
-# 	endif() 
+####################
+# if (${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
+#   set (CONDA_VERSION "python-miniconda")
+
+#   # Install miniconda if needed
+#   if (APPLE)
+#     set (CONDA_HOME ${CMAKE_BINARY_DIR}/${CONDA_VERSION})
+
+#     if (NOT IS_DIRECTORY "${CONDA_HOME}")
+#       message("Installing ${CONDA_VERSION}...")
+
+#       # Create directory to store the installation script
+#       file(MAKE_DIRECTORY ${CONDA_HOME}-install)
+#       set(CONDA_SCRIPT ${CONDA_HOME}-install/${CONDA_VERSION}.sh)
+
+#       # Download script
+#       file (DOWNLOAD http://repo.continuum.io/miniconda/Miniconda-3.8.3-MacOSX-x86_64.sh ${CONDA_SCRIPT} SHOW_PROGRESS)
+
+#       # Execute the batch mode installation
+#       execute_process(COMMAND bash ${CONDA_SCRIPT} -f -b -p ${CONDA_HOME})
+
+#           # Fix rpath
+#           message("COMMAND install_name_tool -id ${CONDA_HOME}/lib/libpython2.7.dylib ${CONDA_HOME}/lib/libpython2.7.dylib")
+#           execute_process(COMMAND install_name_tool -id ${CONDA_HOME}/lib/libpython2.7.dylib ${CONDA_HOME}/lib/libpython2.7.dylib)
+
+#         message("${CONDA_VERSION} installed")
+#       endif()
+
+#     # Set python variables
+#     set(PYTHON_INCLUDE_DIR ${CONDA_HOME}/include/python2.7)
+#     set(PYTHON_LIBRARY ${CONDA_HOME}/lib/libpython2.7.dylib)
+#     set(PYTHON_EXECUTABLE ${CONDA_HOME}/bin/python)
+#   endif()
 # endif()
 
 ######
-## This code is not building because of the libsqlite3.0.dylib library, 
-## so we remove it right after installing Miniconda 
+## This code is not building because of the libsqlite3.0.dylib library,
+## so we remove it right after installing Miniconda
 ######
 if((NOT DEFINED PYTHON_INCLUDE_DIR
     OR NOT DEFINED PYTHON_LIBRARY
-    OR NOT DEFINED PYTHON_EXECUTABLE) 
-  AND (NOT ${CMAKE_PROJECT_NAME}_USE_SYSTEM_${proj} OR ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj}))
-    
-  if (${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})  	
-    set (python_DIR ${CMAKE_BINARY_DIR}/python-conda)    
+    OR NOT DEFINED PYTHON_EXECUTABLE)
+    AND (NOT ${CMAKE_PROJECT_NAME}_USE_SYSTEM_${proj} OR ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj}))
+  if (${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
+    set(python_DIR ${CMAKE_BINARY_DIR}/python-conda)
     file(MAKE_DIRECTORY ${python_DIR})
-    
+
     # Choose install file depending on the platform version
     # TODO: host this file in a controlled repository
-    if (UNIX)      
+    if (UNIX)
       if (APPLE)
         set (PYTHON-INSTALL-FILE "https://www.dropbox.com/s/j68c3b9rhmvgqwv/Miniconda-Mac.tar.gz")
       else()
         set (PYTHON-INSTALL-FILE "https://www.dropbox.com/s/1xcwejg40u6b5mu/Miniconda-linux.tar.gz")
       endif()
       set (INSTALL_COMMAND bash ${python_DIR}-install/Miniconda-install.sh -f -b -p ${python_DIR})
+      ExternalProject_Add(${proj}
+        URL ${PYTHON-INSTALL-FILE}
+        #URL_MD5 "d3ad8868836e177ee4f9bd8bbd0c827a"
+        DOWNLOAD_DIR ${python_DIR}-install
+        SOURCE_DIR ${python_DIR}-install
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        #INSTALL_COMMAND bash ${python_DIR}-install/Miniconda-install.sh -f -b -p ${python_DIR}
+        INSTALL_COMMAND ${INSTALL_COMMAND}
+        # Test: install numpy (requires to disable Slicer Numpy).... OK
+      ExternalProject_Add_Step(${proj} installNumpy
+        COMMAND ${python_DIR}/bin/conda install --yes --quiet numpy
+        DEPENDEES install
+      )
+      ExternalProject_Add_Step(${proj} installSciPy
+        COMMAND ${python_DIR}/bin/conda install --yes --quiet scikit-learn
+        DEPENDEES installNumpy
+      )
+    )
     else()
       # Windows
-      set (PYTHON-INSTALL-FILE "https://www.dropbox.com/s/34n1771as727pj0/Miniconda-Windows.tar.gz")
-      set (INSTALL_COMMAND ${python_DIR}-install/Miniconda-3.8.3-Windows-x86_64.exe /InstallationType=AllUsers /S /D=${python_DIR})
+      if (NOT IS_DIRECTORY "${CONDA_HOME}")
+        message("FATAL_ERROR Conda missing - set the CONDA_HOME variable after running the miniconda installer")
+      else()
+        set(PYTHON_INCLUDE_DIR ${CONDA_HOME}/include/)
+        set(PYTHON_LIBRARY ${CONDA_HOME}/libs/python27.lib)
+        set(PYTHON_EXECUTABLE ${CONDA_HOME}/python)
+        set(Slicer_USE_SYSTEM_python ON)
+        ExternalProject_Add(${proj}
+        DOWNLOAD_COMMAND echo "Using External Python - Nothing to see here"
+        INSTALL_COMMAND ""
+        BUILD_COMMAND ""
+        CONFIGURE_COMMAND "")
+        ExternalProject_Add_Step(${proj} installNumpy
+          COMMAND ${CONDA_HOME}/Scripts/conda install --yes numpy
+          DEPENDEES install
+        )
+        ExternalProject_Add_Step(${proj} installSciPy
+          COMMAND ${CONDA_HOME}/Scripts/conda install --yes scikit-learn
+          DEPENDEES installNumpy
+        )
+      endif()
     endif()
 
-
-    # TODO: modify file names
-    ExternalProject_Add(${proj}
-      URL ${PYTHON-INSTALL-FILE}
-      #URL_MD5 "d3ad8868836e177ee4f9bd8bbd0c827a"     
-      DOWNLOAD_DIR ${python_DIR}-install
-      SOURCE_DIR ${python_DIR}-install      
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND ""
-      #INSTALL_COMMAND bash ${python_DIR}-install/Miniconda-install.sh -f -b -p ${python_DIR}
-      INSTALL_COMMAND ${INSTALL_COMMAND}
-    )               
-      
     if (APPLE)
       ExternalProject_Add_Step(${proj} fix_rpath
         COMMAND install_name_tool -id ${python_DIR}/lib/libpython2.7.dylib ${python_DIR}/lib/libpython2.7.dylib
         DEPENDEES install
-      ) 
-  
-      # hack: rename libsqlite3.dylib in order that CTK is building. Apparently is not needed, but it is referenced 
+      )
+
+      # hack: rename libsqlite3.dylib in order that CTK is building. Apparently is not needed, but it is referenced
       # from /System/Library/Frameworks/CoreData.framework/Versions/A/CoreData, neccesary to build CTK
       ExternalProject_Add_Step(${proj} rename_libsqlite
         COMMAND mv ${python_DIR}/lib/libsqlite3.dylib ${python_DIR}/lib/libsqlite3.dylib.bak
@@ -128,28 +152,13 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
       )
     endif()
 
-    # Test: install numpy (requires to disable Slicer Numpy).... OK  
-    ExternalProject_Add_Step(${proj} installNumpy
-      COMMAND ${python_DIR}/bin/conda install --yes --quiet numpy  
-      DEPENDEES install
-    )
-    
-    # Test: install scipy... OK
-    # ExternalProject_Add_Step(${proj} installSciPy
-    #   COMMAND ${python_DIR}/bin/conda install --yes --quiet scipy
-    #   DEPENDEES installNumpy
-    # )	
-    
-    ExternalProject_Add_Step(${proj} installSciPy
-      COMMAND ${python_DIR}/bin/conda install --yes --quiet scikit-learn
-      DEPENDEES installNumpy
-    )	
-    
+
+
   else()
     # Regular Slicer behaviour
     # Download Python source
     set(python_SOURCE_DIR "${CMAKE_BINARY_DIR}/Python-2.7.3")
-  
+
     set(EXTERNAL_PROJECT_OPTIONAL_ARGS)
     if(MSVC)
       list(APPEND EXTERNAL_PROJECT_OPTIONAL_ARGS
@@ -158,7 +167,7 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
           -P ${CMAKE_CURRENT_LIST_DIR}/${proj}_patch.cmake
         )
     endif()
-  
+
     ExternalProject_Add(python-source
       URL "https://www.python.org/ftp/python/2.7.3/Python-2.7.3.tgz"
       URL_MD5 "2cf641732ac23b18d139be077bd906cd"
@@ -169,13 +178,13 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
       BUILD_COMMAND ""
       INSTALL_COMMAND ""
       )
-  
+
     if(NOT DEFINED git_protocol)
       set(git_protocol "git")
     endif()
-  
+
     set(EXTERNAL_PROJECT_OPTIONAL_CMAKE_ARGS CMAKE_ARGS)
-  
+
     if(Slicer_USE_PYTHONQT_WITH_TCL)
       list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_ARGS
         -DTCL_LIBRARY:FILEPATH=${TCL_LIBRARY}
@@ -184,7 +193,7 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
         -DTK_INCLUDE_PATH:PATH=${CMAKE_CURRENT_BINARY_DIR}/tcl-build/include
         )
     endif()
-  
+
     if(PYTHON_ENABLE_SSL)
       list_to_string(${EP_LIST_SEPARATOR} "${OPENSSL_LIBRARIES}" EP_OPENSSL_LIBRARIES)
       list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_ARGS
@@ -192,16 +201,16 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
         -DOPENSSL_LIBRARIES:STRING=${EP_OPENSSL_LIBRARIES}
         )
     endif()
-  
- 
-    if(APPLE)    
+
+
+    if(APPLE)
       list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_ARGS
         -DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON
         )
     endif()
-  
+
     set(EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS)
-  
+
     # Force Python build to "Release".
     if(CMAKE_CONFIGURATION_TYPES)
       set(SAVED_CMAKE_CFG_INTDIR ${CMAKE_CFG_INTDIR})
@@ -210,7 +219,7 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
       list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=Release)
     endif()
-  
+
     ExternalProject_Add(${proj}
       ${${proj}_EP_ARGS}
       GIT_REPOSITORY "${git_protocol}://github.com/davidsansome/python-cmake-buildsystem.git"
@@ -236,10 +245,10 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
       DEPENDS
         python-source ${${proj}_DEPENDENCIES}
       )
-      
-    set(python_DIR ${CMAKE_BINARY_DIR}/${proj}-install)		
-	endif()
-  
+
+    set(python_DIR ${CMAKE_BINARY_DIR}/${proj}-install)
+    endif()
+
 
   if(UNIX)
     set(python_IMPORT_SUFFIX so)
@@ -251,12 +260,14 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
     set(PYTHON_LIBRARY ${python_DIR}/lib/libpython2.7.${python_IMPORT_SUFFIX})
     set(PYTHON_EXECUTABLE ${python_DIR}/bin/SlicerPython)
     set(slicer_PYTHON_REAL_EXECUTABLE ${python_DIR}/bin/python)
-  elseif(WIN32)
+  elseif(WIN32 AND NOT ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
     set(slicer_PYTHON_SHARED_LIBRARY_DIR ${python_DIR}/bin)
     set(PYTHON_INCLUDE_DIR ${python_DIR}/include)
     set(PYTHON_LIBRARY ${python_DIR}/libs/python27.lib)
     set(PYTHON_EXECUTABLE ${python_DIR}/bin/SlicerPython.exe)
     set(slicer_PYTHON_REAL_EXECUTABLE ${python_DIR}/bin/python.exe)
+  elseif(WIN32)
+    message("Continuing with External SlicerConda")
   else()
     message(FATAL_ERROR "Unknown system !")
   endif()
@@ -282,7 +293,7 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
 
   endif()
 
-  if(CMAKE_CONFIGURATION_TYPES)
+  if(SAVED_CMAKE_CFG_INTDIR)
     set(CMAKE_CFG_INTDIR ${SAVED_CMAKE_CFG_INTDIR}) # Restore CMAKE_CFG_INTDIR
   endif()
 
@@ -307,7 +318,7 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
     VARS ${proj}_PATHS_LAUNCHER_BUILD
     LABELS "PATHS_LAUNCHER_BUILD"
     )
-  
+
   # pythonpath
   set(_pythonhome ${CMAKE_BINARY_DIR}/python-install)
   set(pythonpath_subdir lib/python2.7)
@@ -364,8 +375,8 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
     )
 
 else()
-	if (NOT ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
-  	ExternalProject_Add_Empty(${proj} DEPENDS ${${proj}_DEPENDENCIES})
+    if (NOT ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
+    ExternalProject_Add_Empty(${proj} DEPENDS ${${proj}_DEPENDENCIES})
   endif()
 endif()
 
