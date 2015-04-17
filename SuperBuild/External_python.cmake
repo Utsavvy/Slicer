@@ -122,17 +122,18 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
         set(PYTHON_LIBRARY ${CONDA_HOME}/libs/python27.lib)
         set(PYTHON_EXECUTABLE ${CONDA_HOME}/python)
         set(Slicer_USE_SYSTEM_python ON)
+		set(python_DIR ${CONDA_HOME})
         ExternalProject_Add(${proj}
         DOWNLOAD_COMMAND echo "Using External Python - Nothing to see here"
         INSTALL_COMMAND ""
         BUILD_COMMAND ""
         CONFIGURE_COMMAND "")
         ExternalProject_Add_Step(${proj} installNumpy
-          COMMAND ${CONDA_HOME}/Scripts/conda install --yes numpy
+          COMMAND ${python_DIR}/Scripts/conda install --yes numpy
           DEPENDEES install
         )
         ExternalProject_Add_Step(${proj} installSciPy
-          COMMAND ${CONDA_HOME}/Scripts/conda install --yes scikit-learn
+          COMMAND ${python_DIR}/Scripts/conda install --yes scikit-learn
           DEPENDEES installNumpy
         )
       endif()
