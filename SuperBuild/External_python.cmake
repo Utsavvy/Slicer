@@ -327,6 +327,10 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
     set(pythonpath_subdir Lib)
   endif()
 
+  if(WIN32 AND ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
+    set(_pythonhome ${CONDA_HOME})
+  endif()
+
   set(${proj}_PYTHONPATH_LAUNCHER_BUILD
     ${_pythonhome}/${pythonpath_subdir}
     ${_pythonhome}/${pythonpath_subdir}/lib-dynload
@@ -370,6 +374,9 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
 
   # environment variables
   set(${proj}_ENVVARS_LAUNCHER_INSTALLED "PYTHONHOME=<APPLAUNCHER_DIR>/lib/Python")
+  if (WIN32 AND ${CMAKE_PROJECT_NAME}_USE_CONDA_${proj})
+    set(${proj}_ENVVARS_LAUNCHER_INSTALLED "PYTHONHOME=${CONDA_HOME}")
+  endif()
   mark_as_superbuild(
     VARS ${proj}_ENVVARS_LAUNCHER_INSTALLED
     LABELS "ENVVARS_LAUNCHER_INSTALLED"
